@@ -2,7 +2,6 @@ import numpy as np
 
 """
     This file contains all the compartmental models - their ODEs
-
 """
 
 

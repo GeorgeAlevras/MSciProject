@@ -7,24 +7,30 @@ from scipy.integrate import solve_ivp
 """
 
 
-def run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef):
+def run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days=50, stochastic=False):
     if model == 'sirv':
-        return run_sirv(models[model], population, R_0, vac_frac, nat_imm_rate, vac_ef)
+        return run_sirv(models[model], population, R_0, vac_frac, nat_imm_rate, vac_ef, days, stochastic)
     elif model == 'sirv_c':
-        return run_sirv_c(models[model], population, R_0, vac_frac, nat_imm_rate, vac_ef)
+        return run_sirv_c(models[model], population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days, stochastic)
     else:
         raise ValueError('Model not available')
 
 
-def run_sirv(func, pop, R_0, vac_frac, nat_imm_rate, vac_ef):
-    t_span = np.array([0, 50])
+def run_sirv(func, pop, R_0, vac_frac, nat_imm_rate, vac_ef, days, stochastic=False):
+    t_span = np.array([0, days])
     t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)
 
     susceptible = (pop - 1e3 - pop*nat_imm_rate)*(1-vac_frac)
     infected = 1e3*(1-vac_frac)
     recovered = pop*nat_imm_rate
     x_0 = [susceptible, infected, recovered, (pop-susceptible-infected-recovered)]
-    args = (R_0*(1/6), (1/6), vac_ef, pop)
+
+    if stochastic:
+        R_0 = np.random.normal(loc=4.5, scale=1)  # Draw an R_0 value from a Gaussian distribution
+        g = np.random.normal(loc=(1/6), scale=(1/25))  # Draw an inverse serial number from a Gaussian distribution
+        args = (R_0*g, g, vac_ef, pop)
+    else:
+        args = (R_0*(1/6), (1/6), vac_ef, pop)
 
     solutions = solve_ivp(func, t_span, x_0, args=args, t_eval=t)
     S = solutions.y[0]
@@ -38,16 +44,23 @@ def run_sirv(func, pop, R_0, vac_frac, nat_imm_rate, vac_ef):
     return [S, I, R, V], max(R_t)
 
 
-def run_sirv_c(func, pop, R_0, vac_frac, nat_imm_rate, vac_ef):
-    t_span = np.array([0, 50])
+def run_sirv_c(func, pop, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days, stochastic=False):
+    t_span = np.array([0, days])
     t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)
 
     susceptible = (pop - 1e3 - pop*nat_imm_rate)*(1-vac_frac)
     symptomatic = 1e3*(1-vac_frac)
     recovered = pop*nat_imm_rate
     x_0 = [susceptible, 0, 0, symptomatic, 0, recovered, 0, (pop-susceptible-symptomatic-recovered), 0, 0, 0]
-    args = (R_0*(1/6), R_0*(1/6), 0, 0.083333333, 0.15, 0.1, (1/6), (1/6), 0.075, 0.003428571, 0.025, (1-vac_ef)*R_0*(1/6), (1-vac_ef)*R_0*(1/6), 0.1, 0.00035, 0.1, 0.00125, 0.2, (1/6))
-            
+
+    if stochastic:
+        R_0 = np.random.normal(loc=3.5, scale=1)  # Draw an R_0 value from a Gaussian distribution
+        # g = np.random.normal(loc=(1/6), scale=(1/25))  # Draw an inverse serial number from a Gaussian distribution
+        g = (1/6)
+        args = (R_0*g, R_0*g, vaccination_rate, 0.083333333, 0.15, 0.1, g, g, 0.075, 0.003428571, 0.025, (1-vac_ef)*R_0*g, (1-vac_ef)*R_0*g, 0.1, 0.00035, 0.1, 0.00125, 0.2, g)
+    else:
+        args = (R_0*(1/6), R_0*(1/6), vaccination_rate, 0.083333333, 0.15, 0.1, (1/6), (1/6), 0.075, 0.003428571, 0.025, (1-vac_ef)*R_0*(1/6), (1-vac_ef)*R_0*(1/6), 0.1, 0.00035, 0.1, 0.00125, 0.2, (1/6))
+    
     solutions = solve_ivp(func, t_span, x_0, args=args, t_eval=t)
     S = solutions.y[0]
     E = solutions.y[1]

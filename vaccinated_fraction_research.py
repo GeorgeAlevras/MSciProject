@@ -14,19 +14,21 @@ from progress.bar import Bar
 
 
 def my_search(model, R_0, vac_ef, nat_imm_rate, rel_acc_wanted=0.01):
+    days = 50
+    vaccination_rate = 0
     population = 1000e3
     high = 998e3
     low = 1e3
     mid = 0.5*(low+high)
 
     vac_frac = high/population
-    max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef)[1]
+    max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days)[1]
     
     if max_R_t > 1:
         return None
     else:
         vac_frac = mid/population
-        max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef)[1]
+        max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days)[1]
         rel_acc = abs(max_R_t - 1)
         counter = 0
         while rel_acc > rel_acc_wanted:
@@ -35,7 +37,7 @@ def my_search(model, R_0, vac_ef, nat_imm_rate, rel_acc_wanted=0.01):
                 low = mid
                 mid = 0.5*(low+high)
                 vac_frac = mid/population
-                max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef)[1]
+                max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days)[1]
                 rel_acc = abs(max_R_t - 1)
                 if counter > 20:
                     break
@@ -43,7 +45,7 @@ def my_search(model, R_0, vac_ef, nat_imm_rate, rel_acc_wanted=0.01):
                 high = mid
                 mid = 0.5*(low+high)
                 vac_frac = mid/population
-                max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef)[1]
+                max_R_t = run_model(model, population, R_0, vac_frac, nat_imm_rate, vac_ef, vaccination_rate, days)[1]
                 rel_acc = abs(max_R_t - 1)
                 if counter > 20:
                     break
@@ -55,15 +57,15 @@ def theoretical(V, E, nat_imm=0):
 
 
 def use_args(args):
-    n_i = 0.24
-    R_0_space = np.linspace(0, 0.999, 101)
+    n_i = 0
+    vaccinated_fraction_space = np.linspace(0, 0.999, 101)
     R_0s = np.linspace(1.1, 8, 70)
     vaccine_efficacies = np.linspace(0.3, 1, 15)
 
     theoretical_curves = []
     for i in range(len(vaccine_efficacies)):
-        theoretical_curves.append(theoretical(R_0_space, vaccine_efficacies[i], nat_imm=n_i))
-
+        theoretical_curves.append(theoretical(vaccinated_fraction_space, vaccine_efficacies[i], nat_imm=n_i))
+    
     vaccine_efficacy_curves = []
     R_0_to_plot = []
 
@@ -82,12 +84,22 @@ def use_args(args):
             vaccine_efficacy_curves.append(curve)
             R_0_to_plot.append(curve_R_0)
         bar.finish()
+        
+        residuals_metrics = []
+        for i in range(len(vaccine_efficacies)):
+            t = theoretical(np.array(vaccine_efficacy_curves[i]), vaccine_efficacies[i], nat_imm=n_i)
+            fractional_residuals = (t-R_0_to_plot[i])/t
+            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals))])
+        residuals_metrics = np.array(residuals_metrics)
+        avg_res = np.average(residuals_metrics[:,0])
+        max_res = max(residuals_metrics[:,1])
+        print('Average residual:', avg_res, '\nMaximum residual:', max_res)
 
         fig, ax = plt.subplots()
         colors = ['black', 'blue', 'green', 'red', 'orange', 'purple']
         for i in range(len(vaccine_efficacy_curves)):
             plt.plot(R_0_to_plot[i], vaccine_efficacy_curves[i], '.', label=r'$Model: \: {}$'.format(str(round(vaccine_efficacies[i]*100, 0)))+'%', color=colors[i%len(colors)])
-            plt.plot(theoretical_curves[i], R_0_space, label=r'Theoretical: {}%'.format(str(round(vaccine_efficacies[i]*100, 0))), color=colors[i%len(colors)])
+            plt.plot(theoretical_curves[i], vaccinated_fraction_space, label=r'Theoretical: {}%'.format(str(round(vaccine_efficacies[i]*100, 0))), color=colors[i%len(colors)])
         plt.minorticks_off()
         ax.tick_params(direction='in')
         ax.tick_params(which='minor', direction='in')
@@ -116,12 +128,22 @@ def use_args(args):
             vaccine_efficacy_curves.append(curve)
             R_0_to_plot.append(curve_R_0)
         bar.finish()
+        
+        residuals_metrics = []
+        for i in range(len(vaccine_efficacies)):
+            t = theoretical(np.array(vaccine_efficacy_curves[i]), vaccine_efficacies[i], nat_imm=n_i)
+            fractional_residuals = (t-R_0_to_plot[i])/t
+            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals))])
+        residuals_metrics = np.array(residuals_metrics)
+        avg_res = np.average(residuals_metrics[:,0])
+        max_res = max(residuals_metrics[:,1])
+        print('Average residual:', avg_res, '\nMaximum residual:', max_res)
 
         fig, ax = plt.subplots()
         colors = ['black', 'blue', 'green', 'red', 'orange', 'purple']
         for i in range(len(vaccine_efficacy_curves)):
             plt.plot(R_0_to_plot[i], vaccine_efficacy_curves[i], '.', label=r'$Model: \: {}$'.format(str(round(vaccine_efficacies[i]*100, 0)))+'%', color=colors[i%len(colors)])
-            plt.plot(theoretical_curves[i], R_0_space, label=r'Theoretical: {}%'.format(str(round(vaccine_efficacies[i]*100, 0))), color=colors[i%len(colors)])
+            plt.plot(theoretical_curves[i], vaccinated_fraction_space, label=r'Theoretical: {}%'.format(str(round(vaccine_efficacies[i]*100, 0))), color=colors[i%len(colors)])
         plt.minorticks_off()
         ax.tick_params(direction='in')
         ax.tick_params(which='minor', direction='in')
