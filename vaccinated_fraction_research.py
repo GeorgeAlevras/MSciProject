@@ -89,11 +89,13 @@ def use_args(args):
         for i in range(len(vaccine_efficacies)):
             t = theoretical(np.array(vaccine_efficacy_curves[i]), vaccine_efficacies[i], nat_imm=n_i)
             fractional_residuals = (t-R_0_to_plot[i])/t
-            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals))])
+            sum_of_squares = np.sum((t-R_0_to_plot[i])**2)
+            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals)), sum_of_squares])
         residuals_metrics = np.array(residuals_metrics)
         avg_res = np.average(residuals_metrics[:,0])
         max_res = max(residuals_metrics[:,1])
-        print('Average residual:', avg_res, '\nMaximum residual:', max_res)
+        sum_sq = sum_of_squares
+        print('Average residual:', round(avg_res, 6), '\nMaximum residual:', round(max_res, 6), '\nSum of Squares:', round(sum_sq, 6))
 
         fig, ax = plt.subplots()
         colors = ['black', 'blue', 'green', 'red', 'orange', 'purple']
@@ -133,11 +135,13 @@ def use_args(args):
         for i in range(len(vaccine_efficacies)):
             t = theoretical(np.array(vaccine_efficacy_curves[i]), vaccine_efficacies[i], nat_imm=n_i)
             fractional_residuals = (t-R_0_to_plot[i])/t
-            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals))])
+            sum_of_squares = np.sum((t-R_0_to_plot[i])**2)
+            residuals_metrics.append([np.average(fractional_residuals), max(abs(fractional_residuals)), sum_of_squares])
         residuals_metrics = np.array(residuals_metrics)
         avg_res = np.average(residuals_metrics[:,0])
         max_res = max(residuals_metrics[:,1])
-        print('Average residual:', avg_res, '\nMaximum residual:', max_res)
+        sum_sq = sum_of_squares
+        print('Average residual:', round(avg_res, 6), '\nMaximum residual:', round(max_res, 6), '\nSum of Squares:', round(sum_sq, 6))
 
         fig, ax = plt.subplots()
         colors = ['black', 'blue', 'green', 'red', 'orange', 'purple']

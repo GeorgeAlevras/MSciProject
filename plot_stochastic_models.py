@@ -2,6 +2,7 @@ from run_model import run_model
 import matplotlib.pyplot as plt
 import argparse
 import numpy as np
+import scipy.stats as st
 
 """
     This file is used to plot compartmental models with stochastic parameters and see dynamics / time-evolutions of different compartments.
@@ -19,7 +20,7 @@ def use_args(args):
         plt.plot(t, S/N, label='Susceptible', color='blue')
         plt.plot(t, E/N, label='Exposed', color='yellow')
         plt.plot(t, (A+A_v)/N, label='Asymptomatic', color='orange')
-        plt.plot(t, (Sy+Sy_v)/N, label='Symptomatic', color='red')
+        plt.plot(t, (Sy+Sy_v)/N, alpha=0.3)
         plt.plot(t, V/N, label='Vaccinated', color='green')
         plt.plot(t, (H+H_v)/N, label='Hospitalised', color='brown')
         plt.plot(t, R/N, label='Recovered', color='pink')
@@ -27,6 +28,7 @@ def use_args(args):
         plt.title(r'$SIRV \: Complex \: Model \:- \: Stochastic \: R_0 \: Time \: Evolution$')
         plt.xlabel('Time [days]')
         plt.ylabel('Proportion of Population')
+        print('Done:', i+1,'/1000')
         if i == 0:
             plt.legend()
     plt.savefig('Plots/sirv_c_stochastic.png')
