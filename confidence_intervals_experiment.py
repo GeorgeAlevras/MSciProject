@@ -22,13 +22,13 @@ def use_args(args):
     solutions = np.array(solutions)
     infected_curves = solutions[:,3]+solutions[:,9]  # symptomatic: non-vaccinated[,3] and vaccinated[,9]
     infected_curves_time_series = [infected_curves[:,i] for i in range(len(infected_curves[0]))]
-    mean = [np.mean(el) for el in infected_curves_time_series]
-    confidence_curve_low = [(st.t.interval(alpha=0.95, df=len(el)-1, loc=np.mean(el), scale=np.std(el)))[0] for el in infected_curves_time_series]
-    confidence_curve_high = [(st.t.interval(alpha=0.95, df=len(el)-1, loc=np.mean(el), scale=np.std(el)))[1] for el in infected_curves_time_series]
-    plt.title(r'$SIRV \: Complex \: Model \:- \: Stochastic \: R_0 \: Time \: Evolution$')
+    fiftieth_percentile = [np.percentile(el, 50) for el in infected_curves_time_series]
+    confidence_curve_low = [np.percentile(el, 2.5) for el in infected_curves_time_series]
+    confidence_curve_high = [np.percentile(el, 97.5) for el in infected_curves_time_series]
+    plt.title(r'$Stochastic \: Parameters \: Confidence \: Interval$')
     plt.xlabel('Time [days]')
     plt.ylabel('Proportion of Population')
-    plt.plot(t, mean/N, '--', label='mean', linewidth=2, color='black')
+    plt.plot(t, fiftieth_percentile/N, '--', label='mean', linewidth=2, color='black')
     plt.plot(t, confidence_curve_low/N, '--', label='a=2.5%', linewidth=2, color='red')
     plt.plot(t, confidence_curve_high/N, '--', label='a=97.5%', linewidth=2, color='blue')
     plt.legend()

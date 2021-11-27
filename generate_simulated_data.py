@@ -12,7 +12,7 @@ def use_args(args):
     N = S + E + A + Sy + H + R + V + A_v + Sy_v + H_v
     infected = solutions[3] + solutions[9]
     signal = infected
-    noise = signal - np.random.normal(signal, 0.05*signal)
+    noise = signal - np.random.normal(signal, args.std*signal)
     simulated_data = signal + noise
     plt.plot(t, infected/N, label='Model Signal')
     plt.plot(t, simulated_data/N, '.', label='Simulated Data')
@@ -28,5 +28,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Georgios Alevras: Generation of Model Data',
                                      epilog='Enjoy the script :)')
     parser.add_argument('-d', '--days', type=int, help='Number of days of model to run')
+    parser.add_argument('-s', '--std', type=float, help='Standard deviation as fraction of mean')
     arguments = parser.parse_args()  # Parses all arguments provided at script on command-line
     use_args(arguments)  # Executes code according to arguments provided
