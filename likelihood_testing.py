@@ -18,6 +18,7 @@ def use_args(args):
     S, E, A, Sy, H, R, D, V, A_v, Sy_v, H_v = generated_model
     N = S + E + A + Sy + H + R + V + A_v + Sy_v + H_v
     generated_model_infected_symptomatic = generated_model[3] + generated_model[9]
+    generated_model_infected_symptomatic = np.random.normal(generated_model_infected_symptomatic, 0.1*generated_model_infected_symptomatic)
     plt.plot(t, generated_model_infected_symptomatic/N, '.', label='Generated Data', color='black')
     
     solutions = []
