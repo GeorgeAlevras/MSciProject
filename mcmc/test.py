@@ -3,33 +3,35 @@ from generate_data import generate_data
 import numpy as np
 import matplotlib.pyplot as plt
 
-R_0 = 3.5
-vaccination_rate = 0.006
-vac_ef = 0.8
-days = 100
-std_f = 0.2
+mu = 10
+s = 2
+def my_dist(x, mu, s):
+    return (1/np.sqrt(2*np.pi*s))*np.exp(-((x-mu)**2)/(2*s**2))
 
-t_span = np.array([0, days])
-t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)
+def chi_sq(expected, observed):
+    return np.sum([(e-o)**2 for e, o in zip(expected, observed)])
 
-model_params = (R_0*(1/6), R_0*(1/6), vaccination_rate, 0.083333333, 0.15, 0.1, (1/6), (1/6), 0.075, 0.003428571, 0.025, (1-vac_ef)*R_0*(1/6), (1-vac_ef)*R_0*(1/6), 0.1, 0.00035, 0.1, 0.00125, 0.2, (1/6), std_f)
-model_state_params = [1000e3, 1e3, 0, 0, days]
-generated_model, N = generate_data(model_params, model_state_params)
-generated_model_infected_symptomatic = generated_model[3] + generated_model[9]
-generated_model_infected_symptomatic = np.random.normal(generated_model_infected_symptomatic, 0.05*generated_model_infected_symptomatic)
-plt.plot(t, generated_model_infected_symptomatic/N, '.', label='Generated Data', color='black')
+space = np.linspace(0, 40, 401)
+original = my_dist(space, mu, s)
 
-solutions = []
-arguments = []
-model_params_c = np.array((R_0*(1/6), R_0*(1/6), vaccination_rate, 0.083333333, 0.15, 0.1, (1/6), (1/6), 0.075, 0.003428571, 0.025, (1-vac_ef)*R_0*(1/6), (1-vac_ef)*R_0*(1/6), 0.1, 0.00035, 0.1, 0.00125, 0.2, (1/6)))
+init_mu = 12
+init_s = 3
+my_values = my_dist(space, init_mu, init_s)
+chi_init = chi_sq(original, my_values)
+accepted_steps = []
+
 for i in range(1000):
-    model_params = abs(np.random.normal(model_params_c, 0.1*model_params_c))
-    model_results = run_model('sirv_c', model_params, model_state_params)
-    solutions.append(np.array(model_results[0]))
-    arguments.append(model_params)
-    S, E, A, Sy, H, R, D, V, A_v, Sy_v, H_v = solutions[i]
-    N = S + E + A + Sy + H + R + V + A_v + Sy_v + H_v
-    plt.plot(t, (Sy+Sy_v)/N, alpha=0.1, color='green')
-    print('Done:', i+1,'/1000')
+    new_param_mu = np.random.normal(init_mu, 0.1*init_mu)
+    new_param_s = np.random.normal(init_s, 0.1*init_s)
+    new_values = my_dist(space, new_param_mu, new_param_s)
+    chi_new = chi_sq(original, new_values)
 
-plt.show()   
+    if chi_new < chi_init:
+        accepted_steps.append((new_param_mu, new_param_s))
+        init_mu = new_param_mu
+        init_s = new_param_s
+        chi_init = chi_new
+    else:
+        pass
+
+print(accepted_steps)
