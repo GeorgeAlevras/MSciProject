@@ -3,7 +3,6 @@ from generate_data import generate_data
 from run_model import run_model
 import argparse
 import matplotlib.pyplot as plt
-import time
 
 def chi_sq(expected, observed):
     return np.sum([((e-o)**2)/(2*np.std(expected)**2) for e, o in zip(expected, observed)])
