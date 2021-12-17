@@ -32,17 +32,18 @@ def mcmc(model_params, state_params, gen_infected, gen_std, iterations, std_f, c
     old_results = np.array([run_model('sirv', params, state_params)[0] for params in old_params])
     old_infected = old_results[:,1]
     old_chi = np.array([chi_sq(gen_infected, i) for i in old_infected])
-    accepted_params = [[o_p, o_c] for o_p, o_c in zip(old_params, old_chi)]
+    accepted_params = [[[o_p, o_c]] for o_p, o_c in zip(old_params, old_chi)]
 
-    boltzmann_c = 100000
-    f = 1
+    p = 0.25
     for i in range(iterations):
         min_acc = min([len(a) for a in accepted_params])
-        new_params = abs(np.random.normal(old_params, f*std_f*initial_params))
+        new_params = abs(np.random.normal(old_params, std_f*initial_params))
         new_results = np.array([run_model('sirv', params, state_params)[0] for params in new_params])
         new_infected = new_results[:,1]
         new_chi = np.array([chi_sq(gen_infected, i) for i in new_infected])
+        
         for chain in range(chains):
+            boltzmann_c = (-1)*gen_std*np.log(p)/(new_chi[chain]-old_chi[chain])
             if new_chi[chain] < old_chi[chain]:
                 accepted_params[chain].append([new_params[chain], new_chi[chain]])
                 old_params[chain] = new_params[chain]
@@ -54,11 +55,9 @@ def mcmc(model_params, state_params, gen_infected, gen_std, iterations, std_f, c
                     old_chi[chain] = new_chi[chain]
                 else:
                     pass
-        if min_acc > burn_in:
-            f *= 0.2
-            boltzmann_c *= 0.05
-        if min_acc > 3*burn_in:
-            f *= 0.2
+        if min_acc%burn_in == 0:
+            std_f *= 0.7
+            p *= 0.25
         print('Done: ', i, '/'+str(iterations))
     
     for chain in range(chains):
@@ -78,10 +77,43 @@ def use_args(args):
     if args.days == None:
         args.days = 50
     
-    model_params = (0.58333, 0.16667, 0.006, 0.2)
+    model_params = (0.583333, 0.166667, 0.006, 0.2)
     state_params = (1000e3, 1e3, 0, 0, args.days) 
     generated_model_no_noise, generated_model_infected_symptomatic, gen_std = generated_data(model_params, state_params)
-    accepted, first = mcmc(model_params, state_params, generated_model_infected_symptomatic, gen_std, iterations=10000, std_f=0.3, chains=4, burn_in=1000)
+    accepted, first = mcmc(model_params, state_params, generated_model_infected_symptomatic, gen_std, iterations=20000, std_f=0.5, chains=8, burn_in=2000)
+    
+    chi_sq_values = [accepted[0][-1][1], accepted[1][-1][1], accepted[2][-1][1], accepted[3][-1][1]]
+    best_params = accepted[np.argmin(chi_sq_values)][-1][0]
+    print('Number of accepted steps: ', len(accepted[0]), len(accepted[1]), len(accepted[2]), len(accepted[3]))
+    print('Best parameters (chain '+str(np.argmin(chi_sq_values)+1)+'):', best_params)
+
+    plt.figure(1)
+    X = ['b', 'g', 'v']
+    X_axis = np.arange(len(X))
+    model_params = list(model_params)
+    mcmc_params = list(best_params)
+    plt.bar(X_axis-0.2, np.array(model_params[:-1])/np.array(model_params[:-1]), 0.2, label='Generated Data')
+    plt.bar(X_axis+0.2, np.array(mcmc_params)/np.array(model_params[:-1]), 0.2, label='MCMC Data')
+    plt.xticks(X_axis, X)
+    plt.xlabel("Parameters")
+    plt.ylabel("Parameters, normalised by generated data parameters")
+    plt.title("MCMC Parameters Comparison")
+    plt.legend()
+    plt.savefig('Images/parameter_relative_ratios.png')
+
+    plt.figure(2)
+    t_span = np.array([0, args.days])
+    t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)
+    plt.plot(t, generated_model_infected_symptomatic, '.', label='Generated Data')
+    plt.plot(t, generated_model_no_noise[1], label='Underlying Gen Data Signal')
+    model_results_best = np.array(run_model('sirv', best_params, state_params)[0])
+    infected_best = model_results_best[1]
+    plt.plot(t, infected_best, label='MCMC Result')
+    plt.xlabel('time')
+    plt.ylabel('Infected People')
+    plt.legend()
+    plt.savefig('Images/results.png')
+    plt.show()
 
 
 if __name__ == '__main__':
