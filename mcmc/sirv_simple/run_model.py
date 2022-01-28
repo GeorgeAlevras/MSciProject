@@ -5,12 +5,12 @@ from scipy.integrate import solve_ivp
 
 def run_model(model, model_params, model_state_params):
     try:
-        return run_sirv_c(models[model], model_params, model_state_params)
+        return run_sirv(models[model], model_params, model_state_params)
     except ValueError:
         print('Model not available')
 
 
-def run_sirv_c(odes, model_params, model_state_params):
+def run_sirv(odes, model_params, model_state_params):
     '''
         model_params = (b, g, v)
         if odes have noise:
