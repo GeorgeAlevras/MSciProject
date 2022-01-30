@@ -23,7 +23,8 @@ def generated_data_sirv(model_params, state_params, added_noise_f=0.05):
     generated_model_susceptible = np.random.normal(generated_model_noise[0], added_noise_f*generated_model_noise[0])
     generated_model_recovered = np.random.normal(generated_model_noise[2], added_noise_f*generated_model_noise[2])
     generated_model_vaccinated = np.random.normal(generated_model_noise[3], added_noise_f*generated_model_noise[3])
-    data_std = np.std(generated_model_infected)
+    data_std = np.std(generated_model_infected) + np.std(generated_model_susceptible) + np.std(generated_model_recovered) + \
+        np.std(generated_model_vaccinated)
 
     return generated_model_no_noise, generated_model_infected, data_std, generated_model_susceptible, generated_model_recovered, generated_model_vaccinated
     
@@ -41,6 +42,8 @@ def mcmc_sirv(model_params, state_params, gen_infected, gen_susc, gen_rec, gen_v
         chi_sq(gen_vac, z) for i, j, k, z in zip(old_infected, old_susceptible, old_recovered, old_vaccinated)])
     accepted_params = [[[o_p, o_c]] for o_p, o_c in zip(old_params, old_chi)]
 
+    counter_lower = 0
+    counter_higher = 0
     for i in range(iterations):
         min_acc = min([len(a) for a in accepted_params])
         new_params = abs(np.random.normal(old_params, std_f*initial_params))  # next guess is Gaussian centred at old_params
@@ -58,17 +61,19 @@ def mcmc_sirv(model_params, state_params, gen_infected, gen_susc, gen_rec, gen_v
                 accepted_params[chain].append([new_params[chain], new_chi[chain]])
                 old_params[chain] = new_params[chain]
                 old_chi[chain] = new_chi[chain]
+                counter_lower += 1
             else:
                 if np.random.binomial(1, np.exp(-boltzmann_c*(new_chi[chain]-old_chi[chain])/gen_std)) == 1:
                     accepted_params[chain].append([new_params[chain], new_chi[chain]])
                     old_params[chain] = new_params[chain]
                     old_chi[chain] = new_chi[chain]
+                    counter_higher += 1
                 else:
                     pass
         if min_acc%burn_in == 0:  # every integer multiple of burn-in time
             std_f *= 1
             p *= 1
-        print('Done: ', i, '/'+str(iterations))
+        print('Done: ', i, '/'+str(iterations), ' Accepted:', len(accepted_params[0]), 'Acc Low:', int(counter_lower/chains), 'Acc High:', int(counter_higher/chains))
     
     for chain in range(chains):
         with open('Chains/chain_'+str(chain+1)+'.txt', 'w') as file:
@@ -91,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--chains', type=int, help='Number of chains for search')
     parser.add_argument('-b', '--burn_in', type=int, help='Number of first X points to disregard, burn-in time')
     parser.add_argument('-i', '--iterations', type=int, help='Number of iterations for search')
+    parser.add_argument('-p', '--probability', type=float, help='Probability of choosing values with lower chi-square')
     args = parser.parse_args()  # Parses all arguments provided at script on command-line
     
     if args.days == None:
@@ -106,6 +112,8 @@ if __name__ == '__main__':
             args.burn_in = int(0.1*args.iterations)
         else:
             args.burn_in = 1000
+    if args.probability == None:
+        args.probability = 0.08
     
     with open('model_params.txt', 'r') as file:
         lines = file.readlines()
@@ -120,7 +128,7 @@ if __name__ == '__main__':
         generated_model_recovered, generated_model_vaccinated = generated_data_sirv(model_params, state_params)
     accepted, first = mcmc_sirv(model_params, state_params, generated_model_infected, \
         generated_model_susceptible, generated_model_recovered, generated_model_vaccinated, \
-            gen_std, iterations=args.iterations, std_f=args.std, chains=args.chains, burn_in=args.burn_in)
+            gen_std, iterations=args.iterations, std_f=args.std, chains=args.chains, burn_in=args.burn_in, p=args.probability)
     number_of_acc_steps = [len(accepted[i]) for i in range(len(accepted))]
 
     np.save(os.path.join('ExperimentData', 'generated_model_no_noise'), np.array(generated_model_no_noise))

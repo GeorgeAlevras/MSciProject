@@ -24,7 +24,7 @@ if __name__ == '__main__':
     model_params = np.load('ExperimentData/model_params.npy', allow_pickle=True)
     state_params = np.load('ExperimentData/state_params.npy', allow_pickle=True)
     number_of_acc_steps = np.load('ExperimentData/number_of_acc_steps.npy', allow_pickle=True)
-
+    print(number_of_acc_steps)
     sys.path.insert(0, os.path.realpath(os.path.join(os.getcwd(), '..')))
     plt.rcParams['text.usetex']=True
 
@@ -86,17 +86,16 @@ if __name__ == '__main__':
     plt.ylabel('Infected People')
     plt.legend()
     plt.savefig('Images/results.png')
-    plt.show()
 
     # 1D marginalized plot
     g = plots.get_single_plotter(width_inch=6)
-    g.plot_1d(samples, 'p1')
+    g.plot_1d(samples, 'p1', marker=best_params[0])
     g.export('./Images/p1_dist.png')
     g = plots.get_single_plotter(width_inch=6)
-    g.plot_1d(samples, 'p2')
+    g.plot_1d(samples, 'p2', marker=best_params[1])
     g.export('./Images/p2_dist.png')
     g = plots.get_single_plotter(width_inch=6)
-    g.plot_1d(samples, 'p3')
+    g.plot_1d(samples, 'p3', marker=best_params[2])
     g.export('./Images/p3_dist.png')
     print('\n')
 
@@ -145,3 +144,5 @@ if __name__ == '__main__':
         print('p1 %s%% lower: %.3f upper: %.3f (%s)'%(conf, lim0.lower, lim0.upper, lim0.limitType()))
         print('p2 %s%% lower: %.3f upper: %.3f (%s)'%(conf, lim1.lower, lim1.upper, lim1.limitType()))
         print('p3 %s%% lower: %.3f upper: %.3f (%s)'%(conf, lim2.lower, lim2.upper, lim2.limitType()))
+
+    plt.show()

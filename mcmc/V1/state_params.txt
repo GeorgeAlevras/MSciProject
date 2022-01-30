@@ -2,4 +2,4 @@
 \infected 1000
 \fraction_vaccinated 0
 \natural_immunity_rate 0
-\days 50
+\days 60

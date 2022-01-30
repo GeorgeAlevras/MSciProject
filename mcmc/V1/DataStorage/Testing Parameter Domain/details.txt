@@ -1,0 +1,4 @@
+iterations 20000
+p 0.08
+chains 8
+burn-in 1000
