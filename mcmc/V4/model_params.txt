@@ -1,0 +1,10 @@
+\beta 0.58883
+\Beta 0.58883
+\gamma 0.16667
+\Gamma 0.14286
+\varepsilon 0.08333
+\Varepsilon 0.15
+\alpha 0.1
+\v 0.006
+\d 0.00111
+\stochastic_noise_fraction 0.2

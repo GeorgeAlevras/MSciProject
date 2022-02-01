@@ -5,8 +5,7 @@ from scipy.integrate import solve_ivp
 
 def run_model(model, model_params, model_state_params):
     try:
-        if 'sirv' in model:
-            return run_sirv(models[model], model_params, model_state_params)
+        return run_sirv(models[model], model_params, model_state_params)
     except ValueError:
         print('Model not available')
 
