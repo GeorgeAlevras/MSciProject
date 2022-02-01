@@ -1,5 +1,5 @@
 import numpy as np
-from generate_data import generate_data_seirvd
+from generate_data import generate_data_seasyrvd
 from run_model import run_model
 import argparse
 import os
@@ -17,8 +17,8 @@ def generated_data_seasyrvd(model_params, state_params, added_noise_f=0.05):
 
     model_params_no_noise = list(model_params).copy()
     model_params_no_noise[-1] = 0
-    generated_model_no_noise, N_no_noise = generate_data_seirvd(model_params_no_noise, state_params)
-    generated_model_noise = generate_data_seirvd(model_params, state_params)[0]
+    generated_model_no_noise, N_no_noise = generate_data_seasyrvd(model_params_no_noise, state_params)
+    generated_model_noise = generate_data_seasyrvd(model_params, state_params)[0]
     generated_model_susceptible = np.random.normal(generated_model_noise[0], added_noise_f*generated_model_noise[0])
     generated_model_exposed = np.random.normal(generated_model_noise[1], added_noise_f*generated_model_noise[1])
     generated_model_asymptomatic = np.random.normal(generated_model_noise[2], added_noise_f*generated_model_noise[2])
@@ -27,10 +27,10 @@ def generated_data_seasyrvd(model_params, state_params, added_noise_f=0.05):
     generated_model_vaccinated = np.random.normal(generated_model_noise[5], added_noise_f*generated_model_noise[5])
     generated_model_deceased = np.random.normal(generated_model_noise[6], added_noise_f*generated_model_noise[6])
     data_std = np.std(generated_model_susceptible) + np.std(generated_model_exposed) + np.std(generated_model_asymptomatic) + \
-         generated_model_symptomatic + np.std(generated_model_recovered) + np.std(generated_model_vaccinated) + np.std(generated_model_deceased)
+         np.std(generated_model_symptomatic) + np.std(generated_model_recovered) + np.std(generated_model_vaccinated) + np.std(generated_model_deceased)
 
-    return generated_model_no_noise, data_std, generated_model_susceptible, generated_model_exposed, generated_model_asymptomatic + \
-        generated_model_symptomatic + generated_model_recovered, generated_model_vaccinated, generated_model_deceased
+    return generated_model_no_noise, data_std, generated_model_susceptible, generated_model_exposed, generated_model_asymptomatic, \
+        generated_model_symptomatic, generated_model_recovered, generated_model_vaccinated, generated_model_deceased
     
 
 def mcmc_seasyrvd(model_params, state_params, gen_susc, gen_exp, gen_asym, gen_sym, gen_rec, gen_vac, gen_dec, gen_std, iterations, std_f, chains=4, burn_in=1000, p=0.2):
@@ -66,7 +66,6 @@ def mcmc_seasyrvd(model_params, state_params, gen_susc, gen_exp, gen_asym, gen_s
         new_chi = np.array([chi_sq(gen_susc, i) + chi_sq(gen_exp, j) + chi_sq(gen_asym, k) + chi_sq(gen_sym, l) + chi_sq(gen_rec, m) + \
         chi_sq(gen_vac, n) + chi_sq(gen_dec, o) for i, j, k, l, m, n, o in zip(new_susceptible, new_exposed, new_asymptomatic, \
             new_symptomatic, new_recovered, new_vaccinated, new_deceased)])
-        
         for chain in range(chains):
             boltzmann_c = (-1)*gen_std*np.log(p)/(new_chi[chain]-old_chi[chain])
             if new_chi[chain] < old_chi[chain]:

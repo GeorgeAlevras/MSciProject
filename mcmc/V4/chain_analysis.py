@@ -55,9 +55,7 @@ if __name__ == '__main__':
 
     samples = loadMCSamples('./ConvertedFiles/convert')  #, settings={'ignore_rows':1000}
     best_stats = [x for x in str(samples.getLikeStats()).split(' ') if '.' in x]
-    best_params = [float(best_stats[3]), float(best_stats[8]), float(best_stats[13]), float(best_stats[18], \
-        float(best_stats[23]), float(best_stats[28]), float(best_stats[33]), float(best_stats[38]), \
-            float(best_stats[43]))]
+    best_params = [float(best_stats[3+5*i]) for i in range(9)]
     
     plt.figure(1)
     X = ['b_a', 'b_sy', 'g_a', 'g_sy', 'e_a', 'e_sy', 'a', 'v', 'd']
@@ -100,7 +98,7 @@ if __name__ == '__main__':
 
     print('\n')
 
-    for i in range(len(X)):
+    for i in range(1, len(X)):
         for j in range(i+1, len(X)):
             g = plots.getSinglePlotter()
             g.plot_2d(samples, ['p'+str(i), 'p'+str(j)], shaded=True)
