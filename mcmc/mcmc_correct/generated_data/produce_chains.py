@@ -1,9 +1,11 @@
+from typing import final
 import numpy as np
 from generate_data import generate_data_sirhd
 from run_model import run_model
 import argparse
 import os
 import matplotlib.pyplot as plt
+import time as time
 
 
 def chi_sq(data, model, std_s):
@@ -14,7 +16,6 @@ def chi_sq(data, model, std_s):
             chi_sq.append((data[i] - model[i])**2 / std_s[i]**2)
     
     return (1/len(chi_sq))*np.sum(chi_sq)
-    # return (((data - model)**2) / std_s**2).mean()
 
 
 def generated_data_sirhd(model_params, state_params, added_noise_f=0.05):
@@ -38,7 +39,7 @@ def generated_data_sirhd(model_params, state_params, added_noise_f=0.05):
     return generated_model_no_noise, generated_model_noise, stds, weights
 
 
-def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=2000, chains=4, proposal_width_fraction=0.5):
+def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=2000, chains=4, proposal_width_fraction=0.5, minimum_cov=50, steps_to_update=200):
     initial_params = np.full((chains, len(model_params[:-1])), model_params[:-1])  # instantiate set of parameters per chain
     old_params = np.random.uniform(0.5*initial_params, 2*initial_params)  # initialise set of parameters; following a uniform distribution
     first_params = old_params.copy()
@@ -50,8 +51,36 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
         w[3]*chi_sq(data[3], h, std[3]) + w[4]*chi_sq(data[4], d, std[4]) for s, i, r, h, d in zip(S_old, I_old, R_old, H_old, D_old)]
     accepted_params = [[[o_p, o_c]] for o_p, o_c in zip(old_params, old_chi)]
 
+    min_acc_steps = np.zeros((chains,))
+    consider_update = False
+    eigenvecs = None
     for i in range(iterations):
-        new_params = abs(np.random.normal(old_params, proposal_width_fraction*initial_params))  # next guess is Gaussian centred at old_params
+        if min(min_acc_steps) > minimum_cov:
+            consider_update = True
+        if consider_update and min(min_acc_steps)%steps_to_update == 0:
+            params = []  # An array to hold vectors of values for each parameter from all chains
+            for j in range(first_params.shape[1]):  # Looping through all parameters
+                tmp = []
+                for c in range(chains):  # Looping through all chains to stack values for each parameter from all chains
+                    tmp.append([accepted_params[c][i][0][j] for i in range(-20, 0)])  # Take last 5 accepted points
+                tmp = np.array(tmp)
+                params.append(tmp.flatten())
+            params = np.array(params)
+
+            # Obtaining the covariance matrix (bias means we use population variance equation, divide by N)
+            covariance_matrix = np.cov(params, bias=True)
+            eigenvals, eigenvecs = np.linalg.eig(covariance_matrix)  # Obtaining the eigenvalues and eigenvectors of the covariance matrix
+            eigenvecs = eigenvecs.T  # Obtaining the eigenvectors from the matrix where each column is an eigenvector
+        
+        if not isinstance(eigenvecs, np.ndarray):
+            new_params = abs(np.random.normal(old_params, proposal_width_fraction*initial_params))  # next guess is Gaussian centred at old_params
+        else:
+            # Taking random steps along the eigenvectors, scaled by the corresponding eigenvalues for each eigenvector
+            steps = [1000*np.random.normal(0, abs(l)) * u for l, u in zip(eigenvals, eigenvecs)]
+            steps = np.array(steps)
+            final_directions = np.sum(steps, axis=0)
+            new_params = list(abs(old_params + final_directions))
+        
         new_results = np.array([run_model('sirhd', params, model_hyperparams) for params in new_params])
         S_new, I_new, R_new, H_new, D_new = new_results[:,0], new_results[:,1], new_results[:,2], new_results[:,3], new_results[:,4]
         new_chi = [w[0]*chi_sq(data[0], s, std[0]) + w[1]*chi_sq(data[1], i, std[1]) + w[2]*chi_sq(data[2], r, std[2]) + \
@@ -62,36 +91,18 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
                 accepted_params[chain].append([new_params[chain], new_chi[chain]])
                 old_params[chain] = new_params[chain]
                 old_chi[chain] = new_chi[chain]
+                min_acc_steps[chain] += 1
             else:
                 if np.random.binomial(1, np.exp((old_chi[chain]-new_chi[chain])/temperature)) == 1:
                     accepted_params[chain].append([new_params[chain], new_chi[chain]])
                     old_params[chain] = new_params[chain]
                     old_chi[chain] = new_chi[chain]
+                    min_acc_steps[chain] += 1
                 else:
                     pass
-        
-        if min([len(accepted_params[c]) for c in range(chains)]) > 10:
-            param_1_tmp = []
-            for c in range(chains):
-                param_1_tmp.append([accepted_params[c][i][0][0] for i in range(len(accepted_params[c]))])
-            param_1 = list(np.hstack(param_1_tmp))
-            param_2_tmp = []
-            for c in range(chains):
-                param_2_tmp.append([accepted_params[c][i][0][1] for i in range(len(accepted_params[c]))])
-            param_2 = list(np.hstack(param_2_tmp))
-            param_3_tmp = []
-            for c in range(chains):
-                param_3_tmp.append([accepted_params[c][i][0][2] for i in range(len(accepted_params[c]))])
-            param_3 = list(np.hstack(param_3_tmp))
-            param_4_tmp = []
-            for c in range(chains):
-                param_4_tmp.append([accepted_params[c][i][0][3] for i in range(len(accepted_params[c]))])
-            param_4 = list(np.hstack(param_4_tmp))
 
-            covariance_matrix = np.cov([param_1, param_2, param_3, param_4], bias=True)
-        
         print('Done: ', i, '/'+str(iterations))
-    print(covariance_matrix)
+    
     for chain in range(chains):
         with open('Chains/chain_'+str(chain+1)+'.txt', 'w') as file:
             for i, step in enumerate(accepted_params[chain]):
@@ -138,7 +149,7 @@ if __name__ == '__main__':
     generated_data_no_noise, generated_data_noise, generated_data_stds, generated_data_weights = generated_data_sirhd(model_params, hyperparams)
     generated_data = [generated_data_noise, generated_data_stds, generated_data_weights]
     accepted_params, first_params = mcmc(model_params, hyperparams, generated_data, temperature=args.temperature, \
-        iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction)
+        iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction, minimum_cov=10, steps_to_update=30)
     number_of_acc_steps = [len(a) for a in accepted_params]
     proportion_accepted = [round(n/args.iterations*100, 2) for n in number_of_acc_steps]
     print(str('%') + ' of points accepted: ', proportion_accepted)
