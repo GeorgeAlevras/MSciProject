@@ -32,14 +32,15 @@ def generated_data_sirhd(model_params, state_params, added_noise_f=0.05):
     generated_model_noise = generate_data_sirhd(model_params, state_params)[0]
     generated_model_noise = np.random.normal(generated_model_noise, added_noise_f*generated_model_noise)
     stds = (added_noise_f+model_params[-1])*generated_model_no_noise  # Pseudo-backprogpagation of stds (from noise)
-    # Weighing each compartment by its total variance - intended for a weighted aggregate chi-squared
     weights = np.array([np.std(compartment) for compartment in generated_model_noise])
     weights = (1/np.sum(weights))*weights
     
     return generated_model_no_noise, generated_model_noise, stds, weights
 
 
-def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=2000, chains=4, proposal_width_fraction=0.5, minimum_cov=50, steps_to_update=200):
+def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=2000, chains=4, \
+    proposal_width_fraction=0.5, steps_to_update=100, depth_cov_mat=50):
+    
     initial_params = np.full((chains, len(model_params[:-1])), model_params[:-1])  # instantiate set of parameters per chain
     old_params = np.random.uniform(0.5*initial_params, 2*initial_params)  # initialise set of parameters; following a uniform distribution
     first_params = old_params.copy()
@@ -49,43 +50,48 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
     
     old_chi = [w[0]*chi_sq(data[0], s, std[0]) + w[1]*chi_sq(data[1], i, std[1]) + w[2]*chi_sq(data[2], r, std[2]) + \
         w[3]*chi_sq(data[3], h, std[3]) + w[4]*chi_sq(data[4], d, std[4]) for s, i, r, h, d in zip(S_old, I_old, R_old, H_old, D_old)]
+    
     accepted_params = [[[o_p, o_c]] for o_p, o_c in zip(old_params, old_chi)]
 
     min_acc_steps = np.zeros((chains,))
-    consider_update = False
     eigenvecs = None
     for i in range(iterations):
-        if min(min_acc_steps) > minimum_cov:
-            consider_update = True
-        if consider_update and min(min_acc_steps)%steps_to_update == 0:
+        if (1+min(min_acc_steps))%steps_to_update == 0:
             params = []  # An array to hold vectors of values for each parameter from all chains
             for j in range(first_params.shape[1]):  # Looping through all parameters
                 tmp = []
                 for c in range(chains):  # Looping through all chains to stack values for each parameter from all chains
-                    tmp.append([accepted_params[c][i][0][j] for i in range(-20, 0)])  # Take last 5 accepted points
+                    tmp.append([accepted_params[c][i][0][j] for i in range(-int((1+min(min_acc_steps))/steps_to_update)*depth_cov_mat, 0)])
                 tmp = np.array(tmp)
                 params.append(tmp.flatten())
             params = np.array(params)
-
+            
             # Obtaining the covariance matrix (bias means we use population variance equation, divide by N)
             covariance_matrix = np.cov(params, bias=True)
             eigenvals, eigenvecs = np.linalg.eig(covariance_matrix)  # Obtaining the eigenvalues and eigenvectors of the covariance matrix
-            eigenvecs = eigenvecs.T  # Obtaining the eigenvectors from the matrix where each column is an eigenvector
-        
+            
         if not isinstance(eigenvecs, np.ndarray):
             new_params = abs(np.random.normal(old_params, proposal_width_fraction*initial_params))  # next guess is Gaussian centred at old_params
         else:
             # Taking random steps along the eigenvectors, scaled by the corresponding eigenvalues for each eigenvector
-            steps = [1000*np.random.normal(0, abs(l)) * u for l, u in zip(eigenvals, eigenvecs)]
-            steps = np.array(steps)
-            final_directions = np.sum(steps, axis=0)
-            new_params = list(abs(old_params + final_directions))
-        
+            steps = np.random.normal(0, np.sqrt(eigenvals)).reshape(-1, 1)
+            opt_1 = eigenvecs @ np.diag(eigenvals)
+            # opt_2 = np.diag(eigenvals) @ np.linalg.inv(eigenvecs)
+            # opt_3 = eigenvecs
+            # param_steps = (1/np.linalg.norm(opt_2)) * opt_2 @ steps
+            # param_steps[-1] = 10000*param_steps[-1]
+            # param_steps[2] = 2*param_steps[2]
+            param_steps = 200 * opt_1 @ steps
+            param_steps = param_steps.reshape(param_steps.shape[0],)
+            print(param_steps)
+            new_params = list(abs(old_params + param_steps))
+            print(new_params)
+
         new_results = np.array([run_model('sirhd', params, model_hyperparams) for params in new_params])
         S_new, I_new, R_new, H_new, D_new = new_results[:,0], new_results[:,1], new_results[:,2], new_results[:,3], new_results[:,4]
         new_chi = [w[0]*chi_sq(data[0], s, std[0]) + w[1]*chi_sq(data[1], i, std[1]) + w[2]*chi_sq(data[2], r, std[2]) + \
         w[3]*chi_sq(data[3], h, std[3]) + w[4]*chi_sq(data[4], d, std[4]) for s, i, r, h, d in zip(S_new, I_new, R_new, H_new, D_new)]
-
+        
         for chain in range(chains):
             if new_chi[chain] < old_chi[chain]:
                 accepted_params[chain].append([new_params[chain], new_chi[chain]])
@@ -101,7 +107,7 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
                 else:
                     pass
 
-        print('Done: ', i, '/'+str(iterations))
+        print('Done:', i, '/' + str(iterations), '  ||  Accepted:', min_acc_steps)
     
     for chain in range(chains):
         with open('Chains/chain_'+str(chain+1)+'.txt', 'w') as file:
@@ -119,15 +125,14 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Georgios Alevras: MCMC Algorithm 3',
                                      epilog='Enjoy the script :)')
-    parser.add_argument('-d', '--days', type=int, help='Number of days of model to run')
     parser.add_argument('-w', '--proposal_width_fraction', type=float, help='Standard deviation of search, as a fraction of value')
     parser.add_argument('-c', '--chains', type=int, help='Number of chains for search')
     parser.add_argument('-i', '--iterations', type=int, help='Number of iterations for search')
     parser.add_argument('-t', '--temperature', type=float, help='Temperature of Boltzmann term')
+    parser.add_argument('-su', '--steps_to_update', type=int, help='how many steps before re-updating covariance matrix')
+    parser.add_argument('-dc', '--depth_cov', type=int, help='Depth for covariance matrix - number of accepted points per chain')
     args = parser.parse_args()  # Parses all arguments provided at script on command-line
     
-    if args.days == None:
-        args.days = 100
     if args.proposal_width_fraction == None:
         args.proposal_width_fraction = 0.5
     if args.chains == None:
@@ -136,7 +141,11 @@ if __name__ == '__main__':
         args.iterations = 10000
     if args.temperature == None:
         args.temperature = 1
-
+    if args.steps_to_update == None:
+        args.steps_to_update == 100
+    if args.depth_cov == None:
+        args.depth_cov == 50
+    
     with open('model_params.txt', 'r') as file:
         lines = file.readlines()
     model_params = [float(lines[i].rstrip('\n').split(' ')[-1]) for i in range(len(lines))]
@@ -149,7 +158,8 @@ if __name__ == '__main__':
     generated_data_no_noise, generated_data_noise, generated_data_stds, generated_data_weights = generated_data_sirhd(model_params, hyperparams)
     generated_data = [generated_data_noise, generated_data_stds, generated_data_weights]
     accepted_params, first_params = mcmc(model_params, hyperparams, generated_data, temperature=args.temperature, \
-        iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction, minimum_cov=10, steps_to_update=30)
+        iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction, \
+            steps_to_update=args.steps_to_update, depth_cov_mat=args.depth_cov)
     number_of_acc_steps = [len(a) for a in accepted_params]
     proportion_accepted = [round(n/args.iterations*100, 2) for n in number_of_acc_steps]
     print(str('%') + ' of points accepted: ', proportion_accepted)
@@ -159,7 +169,6 @@ if __name__ == '__main__':
     np.save(os.path.join('ExperimentData', 'generated_data_no_noise'), np.array(generated_data_no_noise))
     np.save(os.path.join('ExperimentData', 'generated_data_noise'), np.array(generated_data_noise))
     np.save(os.path.join('ExperimentData', 'generated_data_stds'), np.array(generated_data_stds))
-    np.save(os.path.join('ExperimentData', 'generated_data_weights'), np.array(generated_data_weights))
     np.save(os.path.join('ExperimentData', 'accepted_params'), np.array(accepted_params))
     np.save(os.path.join('ExperimentData', 'first_params'), np.array(first_params))
     np.save(os.path.join('ExperimentData', 'number_of_acc_steps'), np.array(number_of_acc_steps))

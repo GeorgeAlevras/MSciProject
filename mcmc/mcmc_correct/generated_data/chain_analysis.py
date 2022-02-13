@@ -43,9 +43,10 @@ if __name__ == '__main__':
         outChain[:,0] = 1.
         np.savetxt('./ConvertedFiles/convert_{}.txt'.format(idx+1),outChain)
 
-    samples = loadMCSamples('./ConvertedFiles/convert')  #, settings={'ignore_rows':1000}
+    samples = loadMCSamples('./ConvertedFiles/convert', settings={'ignore_rows':10})  # , settings={'ignore_rows':10}
     best_stats = [x for x in str(samples.getLikeStats()).split(' ') if '.' in x]
-    best_params = [float(best_stats[3]), float(best_stats[8]), float(best_stats[13]), float(best_stats[18])]
+    # best_params = [float(best_stats[3]), float(best_stats[8]), float(best_stats[13]), float(best_stats[18])]
+    best_params = [float(best_stats[4]), float(best_stats[9]), float(best_stats[14]), float(best_stats[19])]
 
     plt.figure(1)
     X = ['b', 'g', 'h', 'd']
@@ -97,4 +98,58 @@ if __name__ == '__main__':
         line_args=[{'ls':'-', 'color':'green'}], 
         contour_colors=['green'])
     g.export('./Images/Triangle.pdf')
+
+
+    plt.figure(8)
+    thetas = []
+    for i in range(8):
+        with open('./Chains/chain_'+str(i+1)+'.txt', 'r') as file:
+            lines = file.readlines()
+            thetas.append([float(lines[i].rstrip('\n').split(',')[1]) for i in range(len(lines))])
+            x = np.linspace(1, len(thetas[i]), len(thetas[i]))
+            plt.plot(x, thetas[i], label='p1 - Chain '+str(i+1))
+    plt.legend()
+    plt.xlabel('Number of Accepted Steps')
+    plt.ylabel('P1')
+    plt.savefig('Images/p1_evolution.png')
+
+    plt.figure(9)
+    thetas = []
+    for i in range(8):
+        with open('./Chains/chain_'+str(i+1)+'.txt', 'r') as file:
+            lines = file.readlines()
+            thetas.append([float(lines[i].rstrip('\n').split(',')[2]) for i in range(len(lines))])
+            x = np.linspace(1, len(thetas[i]), len(thetas[i]))
+            plt.plot(x, thetas[i], label='p2 - Chain '+str(i+1))
+    plt.legend()
+    plt.xlabel('Number of Accepted Steps')
+    plt.ylabel('P2')
+    plt.savefig('Images/p2_evolution.png')
+
+    plt.figure(10)
+    thetas = []
+    for i in range(8):
+        with open('./Chains/chain_'+str(i+1)+'.txt', 'r') as file:
+            lines = file.readlines()
+            thetas.append([float(lines[i].rstrip('\n').split(',')[3]) for i in range(len(lines))])
+            x = np.linspace(1, len(thetas[i]), len(thetas[i]))
+            plt.plot(x, thetas[i], label='p3 - Chain '+str(i+1))
+    plt.legend()
+    plt.xlabel('Number of Accepted Steps')
+    plt.ylabel('P3')
+    plt.savefig('Images/p3_evolution.png')
+
+    plt.figure(11)
+    thetas = []
+    for i in range(8):
+        with open('./Chains/chain_'+str(i+1)+'.txt', 'r') as file:
+            lines = file.readlines()
+            thetas.append([float(lines[i].rstrip('\n').split(',')[4]) for i in range(len(lines))])
+            x = np.linspace(1, len(thetas[i]), len(thetas[i]))
+            plt.plot(x, thetas[i], label='p4 - Chain '+str(i+1))
+    plt.legend()
+    plt.xlabel('Number of Accepted Steps')
+    plt.ylabel('P4')
+    plt.savefig('Images/p4_evolution.png')
+
     plt.show()

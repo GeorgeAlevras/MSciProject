@@ -1,0 +1,4 @@
+\population 56000000
+\infected 535800
+\natural_immunity_rate 0.05
+\days 25
