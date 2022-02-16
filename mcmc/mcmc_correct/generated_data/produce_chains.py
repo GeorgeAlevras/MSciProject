@@ -61,7 +61,11 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
             for j in range(first_params.shape[1]):  # Looping through all parameters
                 tmp = []
                 for c in range(chains):  # Looping through all chains to stack values for each parameter from all chains
-                    tmp.append([accepted_params[c][i][0][j] for i in range(-int((1+min(min_acc_steps))/steps_to_update)*depth_cov_mat, 0)])
+                    arr = []
+                    for i in range(-int((1+min(min_acc_steps))/steps_to_update)*depth_cov_mat, 0):
+                        arr.append(accepted_params[c][i][0][j])
+                    tmp.append(np.array(arr) - np.mean(arr))
+                    # tmp.append([accepted_params[c][i][0][j] for i in range(-int((1+min(min_acc_steps))/steps_to_update)*depth_cov_mat, 0)])
                 tmp = np.array(tmp)
                 params.append(tmp.flatten())
             params = np.array(params)
@@ -75,13 +79,7 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
         else:
             # Taking random steps along the eigenvectors, scaled by the corresponding eigenvalues for each eigenvector
             steps = np.random.normal(0, np.sqrt(eigenvals)).reshape(-1, 1)
-            opt_1 = eigenvecs @ np.diag(eigenvals)
-            # opt_2 = np.diag(eigenvals) @ np.linalg.inv(eigenvecs)
-            # opt_3 = eigenvecs
-            # param_steps = (1/np.linalg.norm(opt_2)) * opt_2 @ steps
-            # param_steps[-1] = 10000*param_steps[-1]
-            # param_steps[2] = 2*param_steps[2]
-            param_steps = 200 * opt_1 @ steps
+            param_steps = eigenvecs.T @ steps
             param_steps = param_steps.reshape(param_steps.shape[0],)
             print(param_steps)
             new_params = list(abs(old_params + param_steps))
@@ -172,3 +170,10 @@ if __name__ == '__main__':
     np.save(os.path.join('ExperimentData', 'accepted_params'), np.array(accepted_params))
     np.save(os.path.join('ExperimentData', 'first_params'), np.array(first_params))
     np.save(os.path.join('ExperimentData', 'number_of_acc_steps'), np.array(number_of_acc_steps))
+
+            # opt_1 = eigenvecs @ np.diag(eigenvals)
+            # opt_2 = np.diag(eigenvals) @ np.linalg.inv(eigenvecs)
+            # opt_3 = eigenvecs
+            # param_steps = (1/np.linalg.norm(opt_2)) * opt_2 @ steps
+            # param_steps[-1] = 10000*param_steps[-1]
+            # param_steps[2] = 2*param_steps[2]
