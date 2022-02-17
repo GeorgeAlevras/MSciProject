@@ -12,15 +12,15 @@ def run_model(model, model_params, model_hyperparams):
 
 def run_sirhd(odes, model_params, model_hyperparams):
     '''
-        model_params = (b, g, h, d)
+        model_params = (b_1, b_2, g, h, d)
         if odes have noise:
             model_params = (b, g, h, d, stochastic_noise_f)
         model_hyperparams = [population, infected, nat_imm_rate, days]
     '''
-    population, infected, nat_imm_rate, days = model_hyperparams
+    population, infected, nat_imm_rate, days, days_to_change = model_hyperparams
 
     t_span = np.array([0, days])
-    t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)  # Time series, unit=1 day
+    t = np.linspace(t_span[0], t_span[1], t_span[1])  # Time series, unit=1 day
 
     # Initialisation of compartments
     susceptible = population - infected - population*nat_imm_rate
