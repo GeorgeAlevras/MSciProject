@@ -38,8 +38,8 @@ def generated_data_sirhd(model_params, state_params, added_noise_f=0.05):
     return generated_model_no_noise, generated_model_noise, stds, weights
 
 
-def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=2000, chains=4, \
-    proposal_width_fraction=0.5, steps_to_update=100, depth_cov_mat=50):
+def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=20000, chains=6, \
+    proposal_width_fraction=0.2, steps_to_update=100, depth_cov_mat=50):
     
     initial_params = np.full((chains, len(model_params[:-1])), model_params[:-1])  # instantiate set of parameters per chain
     old_params = np.random.uniform(0.5*initial_params, 2*initial_params)  # initialise set of parameters; following a uniform distribution
@@ -105,7 +105,7 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
                 else:
                     pass
 
-        print('Done:', i, '/' + str(iterations), '  ||  Accepted:', min_acc_steps)
+        print('Done:', i+1, '/' + str(iterations), '  ||  Accepted:', min_acc_steps)
     
     for chain in range(chains):
         with open('Chains/chain_'+str(chain+1)+'.txt', 'w') as file:
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     args = parser.parse_args()  # Parses all arguments provided at script on command-line
     
     if args.proposal_width_fraction == None:
-        args.proposal_width_fraction = 0.5
+        args.proposal_width_fraction = 0.2
     if args.chains == None:
         args.chains = 8
     if args.iterations == None:
@@ -155,9 +155,12 @@ if __name__ == '__main__':
 
     generated_data_no_noise, generated_data_noise, generated_data_stds, generated_data_weights = generated_data_sirhd(model_params, hyperparams)
     generated_data = [generated_data_noise, generated_data_stds, generated_data_weights]
+    s = time.time()
     accepted_params, first_params = mcmc(model_params, hyperparams, generated_data, temperature=args.temperature, \
         iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction, \
             steps_to_update=args.steps_to_update, depth_cov_mat=args.depth_cov)
+    e = time.time()
+    print('Time taken: ', round(e-s, 3))
     number_of_acc_steps = [len(a) for a in accepted_params]
     proportion_accepted = [round(n/args.iterations*100, 2) for n in number_of_acc_steps]
     print(str('%') + ' of points accepted: ', proportion_accepted)
@@ -170,10 +173,3 @@ if __name__ == '__main__':
     np.save(os.path.join('ExperimentData', 'accepted_params'), np.array(accepted_params))
     np.save(os.path.join('ExperimentData', 'first_params'), np.array(first_params))
     np.save(os.path.join('ExperimentData', 'number_of_acc_steps'), np.array(number_of_acc_steps))
-
-            # opt_1 = eigenvecs @ np.diag(eigenvals)
-            # opt_2 = np.diag(eigenvals) @ np.linalg.inv(eigenvecs)
-            # opt_3 = eigenvecs
-            # param_steps = (1/np.linalg.norm(opt_2)) * opt_2 @ steps
-            # param_steps[-1] = 10000*param_steps[-1]
-            # param_steps[2] = 2*param_steps[2]
