@@ -39,7 +39,7 @@ def generated_data_sirhd(model_params, state_params, added_noise_f=0.05):
 
 
 def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterations=20000, chains=6, \
-    proposal_width_fraction=0.2, steps_to_update=100, depth_cov_mat=50):
+    proposal_width_fraction=0.2, steps_to_update=100, depth_cov_mat=50, convergence_criterion=1.05):
     
     initial_params = np.full((chains, len(model_params[:-1])), model_params[:-1])  # instantiate set of parameters per chain
     old_params = np.random.uniform(0.5*initial_params, 2*initial_params)  # initialise set of parameters; following a uniform distribution
@@ -55,6 +55,7 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
 
     min_acc_steps = np.zeros((chains,))
     eigenvecs = None
+    gelman_rubin = []
     for i in range(iterations):
         if (1+min(min_acc_steps))%steps_to_update == 0:
             params = []  # An array to hold vectors of values for each parameter from all chains
@@ -104,7 +105,45 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
                     min_acc_steps[chain] += 1
                 else:
                     pass
-
+        
+        # Implementing the Gelman-Rubin statistic
+        N = np.mean(min_acc_steps)
+        p1_data = [[accepted_params[c][i][0][0] for i in range(len(accepted_params[c]))] for c in range(chains)]
+        p1_means = [np.mean(el) for el in p1_data]
+        p1_stds = [np.std(el) for el in p1_data]
+        p1_mean = np.mean(p1_means)
+        B_1 = (N / (chains - 1)) * np.sum([[(p1_m - p1_mean)**2] for p1_m in p1_means])
+        W_1 = (1/chains) * np.sum([p1_s**2 for p1_s in p1_stds])
+        V_1 = ((N-1)/N)*W_1 + ((chains+1)/(chains*N))*B_1
+        
+        p2_data = [[accepted_params[c][i][0][1] for i in range(len(accepted_params[c]))] for c in range(chains)]
+        p2_means = [np.mean(el) for el in p2_data]
+        p2_stds = [np.std(el) for el in p2_data]
+        p2_mean = np.mean(p2_means)
+        B_2 = (N / (chains - 1)) * np.sum([[(p2_m - p2_mean)**2] for p2_m in p2_means])
+        W_2 = (1/chains) * np.sum([p2_s**2 for p2_s in p2_stds])
+        V_2 = ((N-1)/N)*W_2 + ((chains+1)/(chains*N))*B_2
+        
+        p3_data = [[accepted_params[c][i][0][2] for i in range(len(accepted_params[c]))] for c in range(chains)]
+        p3_means = [np.mean(el) for el in p3_data]
+        p3_stds = [np.std(el) for el in p3_data]
+        p3_mean = np.mean(p3_means)
+        B_3 = (N / (chains - 1)) * np.sum([[(p3_m - p3_mean)**2] for p3_m in p3_means])
+        W_3 = (1/chains) * np.sum([p3_s**2 for p3_s in p3_stds])
+        V_3 = ((N-1)/N)*W_3 + ((chains+1)/(chains*N))*B_3
+        
+        p4_data = [[accepted_params[c][i][0][3] for i in range(len(accepted_params[c]))] for c in range(chains)]
+        p4_means = [np.mean(el) for el in p4_data]
+        p4_stds = [np.std(el) for el in p4_data]
+        p4_mean = np.mean(p4_means)
+        B_4 = (N / (chains - 1)) * np.sum([[(p4_m - p4_mean)**2] for p4_m in p4_means])
+        W_4 = (1/chains) * np.sum([p4_s**2 for p4_s in p4_stds])
+        V_4 = ((N-1)/N)*W_4 + ((chains+1)/(chains*N))*B_4
+        
+        gelman_rubin.append([V_1/W_1, V_2/W_2, V_3/W_3, V_4/W_4])
+        if (np.array(gelman_rubin[-1]) < convergence_criterion).all():
+            break
+        print('Gelman-Rubin: ', gelman_rubin[-1])
         print('Done:', i+1, '/' + str(iterations), '  ||  Accepted:', min_acc_steps)
     
     for chain in range(chains):
@@ -117,7 +156,7 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
                         file.write(',')
                 file.write('\n')
 
-    return accepted_params, first_params
+    return accepted_params, first_params, gelman_rubin
 
 
 if __name__ == '__main__':
@@ -129,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--temperature', type=float, help='Temperature of Boltzmann term')
     parser.add_argument('-su', '--steps_to_update', type=int, help='how many steps before re-updating covariance matrix')
     parser.add_argument('-dc', '--depth_cov', type=int, help='Depth for covariance matrix - number of accepted points per chain')
+    parser.add_argument('-cc', '--convergence_criterion', type=float, help='Convergence criterion for Gelman-Rubin statistic')
     args = parser.parse_args()  # Parses all arguments provided at script on command-line
     
     if args.proposal_width_fraction == None:
@@ -140,9 +180,11 @@ if __name__ == '__main__':
     if args.temperature == None:
         args.temperature = 1
     if args.steps_to_update == None:
-        args.steps_to_update == 100
+        args.steps_to_update = 100
     if args.depth_cov == None:
-        args.depth_cov == 50
+        args.depth_cov = 50
+    if args.convergence_criterion == None:
+        args.convergence_criterion = 1.1
     
     with open('model_params.txt', 'r') as file:
         lines = file.readlines()
@@ -156,9 +198,9 @@ if __name__ == '__main__':
     generated_data_no_noise, generated_data_noise, generated_data_stds, generated_data_weights = generated_data_sirhd(model_params, hyperparams)
     generated_data = [generated_data_noise, generated_data_stds, generated_data_weights]
     s = time.time()
-    accepted_params, first_params = mcmc(model_params, hyperparams, generated_data, temperature=args.temperature, \
+    accepted_params, first_params, gelman_rubin = mcmc(model_params, hyperparams, generated_data, temperature=args.temperature, \
         iterations=args.iterations, chains=args.chains, proposal_width_fraction=args.proposal_width_fraction, \
-            steps_to_update=args.steps_to_update, depth_cov_mat=args.depth_cov)
+            steps_to_update=args.steps_to_update, depth_cov_mat=args.depth_cov, convergence_criterion=args.convergence_criterion)
     e = time.time()
     print('Time taken: ', round(e-s, 3))
     number_of_acc_steps = [len(a) for a in accepted_params]
@@ -173,3 +215,4 @@ if __name__ == '__main__':
     np.save(os.path.join('ExperimentData', 'accepted_params'), np.array(accepted_params))
     np.save(os.path.join('ExperimentData', 'first_params'), np.array(first_params))
     np.save(os.path.join('ExperimentData', 'number_of_acc_steps'), np.array(number_of_acc_steps))
+    np.save(os.path.join('ExperimentData', 'gelman_rubin'), np.array(gelman_rubin))

@@ -22,6 +22,7 @@ if __name__ == '__main__':
     accepted_params = np.load('ExperimentData/accepted_params.npy', allow_pickle=True)
     first_params = np.load('ExperimentData/first_params.npy', allow_pickle=True)
     number_of_acc_steps = np.load('ExperimentData/number_of_acc_steps.npy', allow_pickle=True)
+    gelman_rubin = np.load('ExperimentData/gelman_rubin.npy', allow_pickle=True)
     
     sys.path.insert(0, os.path.realpath(os.path.join(os.getcwd(), '..')))
     plt.rcParams['text.usetex']=True
@@ -44,6 +45,23 @@ if __name__ == '__main__':
         np.savetxt('./ConvertedFiles/convert_{}.txt'.format(idx+1),outChain)
 
     samples = loadMCSamples('./ConvertedFiles/convert', settings={'ignore_rows':10})  # , settings={'ignore_rows':10}
+    
+    marge_stats = [x for x in str(samples.getMargeStats()).split(' ') if '.' in x]
+    marge_stats_means = [float(marge_stats[3]), float(marge_stats[11]), float(marge_stats[19]), float(marge_stats[27])]
+    marge_stats_lower1sigma = [float(marge_stats[5]), float(marge_stats[13]), float(marge_stats[21]), float(marge_stats[29])]
+    marge_stats_upper1sigma = [float(marge_stats[6]), float(marge_stats[14]), float(marge_stats[22]), float(marge_stats[30])]
+    marge_stats_lower2sigma = [float(marge_stats[7]), float(marge_stats[15]), float(marge_stats[23]), float(marge_stats[31])]
+    marge_stats_upper2sigma = [float(marge_stats[8]), float(marge_stats[16]), float(marge_stats[24]), float(marge_stats[32])]
+    marge_stats_lower3sigma = [float(marge_stats[9]), float(marge_stats[17]), float(marge_stats[25]), float(marge_stats[33])]
+    marge_stats_upper3sigma = [float(marge_stats[10]), float(marge_stats[18]), float(marge_stats[26]), float(marge_stats[34])]
+    print('Means:', marge_stats_means)
+    print('1 \sigma lower', marge_stats_lower1sigma)
+    print('1 \sigma upper', marge_stats_upper1sigma)
+    print('2 \sigma lower', marge_stats_lower2sigma)
+    print('2 \sigma upper', marge_stats_upper2sigma)
+    print('3 \sigma lower', marge_stats_lower3sigma)
+    print('3 \sigma upper', marge_stats_upper3sigma)
+
     best_stats = [x for x in str(samples.getLikeStats()).split(' ') if '.' in x]
     # best_params = [float(best_stats[3]), float(best_stats[8]), float(best_stats[13]), float(best_stats[18])]
     best_params = [float(best_stats[4]), float(best_stats[9]), float(best_stats[14]), float(best_stats[19])]
@@ -151,5 +169,18 @@ if __name__ == '__main__':
     plt.xlabel('Number of Accepted Steps')
     plt.ylabel('P4')
     plt.savefig('Images/p4_evolution.png')
+
+    plt.figure(12)
+    plt.plot(np.linspace(1, len(gelman_rubin), len(gelman_rubin)), gelman_rubin[:,0], label='p1')
+    plt.plot(np.linspace(1, len(gelman_rubin), len(gelman_rubin)), gelman_rubin[:,1], label='p2')
+    plt.plot(np.linspace(1, len(gelman_rubin), len(gelman_rubin)), gelman_rubin[:,2], label='p3')
+    plt.plot(np.linspace(1, len(gelman_rubin), len(gelman_rubin)), gelman_rubin[:,3], label='p4')
+    plt.plot(np.linspace(1, len(gelman_rubin), len(gelman_rubin)), np.linspace(1.05, 1.05, len(gelman_rubin)), '--', label='Convergence Criterion')
+    plt.xlabel('Iteration')
+    plt.ylabel('Gelman Rubin Statistic')
+    plt.grid()
+    plt.legend()
+    plt.yscale('log')
+    plt.savefig('Images/gelman_rubin.png')
 
     plt.show()
