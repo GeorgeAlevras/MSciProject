@@ -88,9 +88,12 @@ def mcmc(model_params, model_hyperparams, generated_data, temperature=1, iterati
 
         new_results = np.array([run_model('sirhd', params, model_hyperparams) for params in new_params])
         S_new, I_new, R_new, H_new, D_new = new_results[:,0], new_results[:,1], new_results[:,2], new_results[:,3], new_results[:,4]
+        
         new_chi = [w[0]*chi_sq(data[0], s, std[0]) + w[1]*chi_sq(data[1], i, std[1]) + w[2]*chi_sq(data[2], r, std[2]) + \
         w[3]*chi_sq(data[3], h, std[3]) + w[4]*chi_sq(data[4], d, std[4]) for s, i, r, h, d in zip(S_new, I_new, R_new, H_new, D_new)]
-        
+        new_chi += np.array([5*0.5*((new_params[c][2] - 0.003428)/0.0007)**2 for c in range(chains)])  # Prior in 3rd parameter \eta
+        new_chi += np.array([5*0.5*((new_params[c][3] - 0.025)/0.005)**2 for c in range(chains)])  # Prior in 4th parameter \delta
+
         for chain in range(chains):
             if new_chi[chain] < old_chi[chain]:
                 accepted_params[chain].append([new_params[chain], new_chi[chain]])

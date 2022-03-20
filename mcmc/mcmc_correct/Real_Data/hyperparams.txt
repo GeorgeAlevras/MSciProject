@@ -1,5 +1,5 @@
 \population 56000000
 \infected 610400
 \natural_immunity_rate 0.05
-\days 107
+\days 121
 \days_to_change 80

@@ -1,0 +1,8 @@
+\beta 0.5
+\theta 0.5
+\iota 0.5
+\kappa 0.5
+\gamma 0.16667
+\h 0.003428
+\d 0.025
+\stochastic_noise_fraction 0.02
