@@ -52,6 +52,11 @@ if __name__ == '__main__':
     marge_stats_lower3sigma = [float(marge_stats[9]), float(marge_stats[17]), float(marge_stats[25]), float(marge_stats[33]), float(marge_stats[41]), float(marge_stats[49]), float(marge_stats[57]), float(marge_stats[65]), float(marge_stats[73]), float(marge_stats[81]), float(marge_stats[89]), float(marge_stats[97]), float(marge_stats[105]), float(marge_stats[113]), float(marge_stats[121]), float(marge_stats[129]), float(marge_stats[137]), float(marge_stats[145]), float(marge_stats[153]), float(marge_stats[161]), float(marge_stats[169])]
     marge_stats_upper3sigma = [float(marge_stats[10]), float(marge_stats[18]), float(marge_stats[26]), float(marge_stats[34]), float(marge_stats[42]), float(marge_stats[50]), float(marge_stats[58]), float(marge_stats[66]), float(marge_stats[74]), float(marge_stats[82]), float(marge_stats[90]), float(marge_stats[98]), float(marge_stats[106]), float(marge_stats[114]), float(marge_stats[122]), float(marge_stats[130]), float(marge_stats[138]), float(marge_stats[146]), float(marge_stats[154]), float(marge_stats[162]), float(marge_stats[170])]
     print('Means:', marge_stats_means)
+    np.save(os.path.join('PredictionData', 'marge_stats_means'), np.array(marge_stats_means))
+    np.save(os.path.join('PredictionData', 'marge_stats_lower1sigma'), np.array(marge_stats_lower1sigma))
+    np.save(os.path.join('PredictionData', 'marge_stats_upper1sigma'), np.array(marge_stats_upper1sigma))
+    np.save(os.path.join('PredictionData', 'marge_stats_lower2sigma'), np.array(marge_stats_lower2sigma))
+    np.save(os.path.join('PredictionData', 'marge_stats_upper2sigma'), np.array(marge_stats_upper2sigma))
     print('1 \sigma lower', marge_stats_lower1sigma)
     print('1 \sigma upper', marge_stats_upper1sigma)
     print('2 \sigma lower', marge_stats_lower2sigma)
@@ -62,7 +67,8 @@ if __name__ == '__main__':
     best_stats = [x for x in str(samples.getLikeStats()).split(' ') if '.' in x]
     # best_params = [float(best_stats[3]), float(best_stats[8]), float(best_stats[13]), float(best_stats[18])]
     best_params = [float(best_stats[4]), float(best_stats[9]), float(best_stats[14]), float(best_stats[19]), float(best_stats[24]), float(best_stats[29]), float(best_stats[34]), float(best_stats[39]), float(best_stats[44]), float(best_stats[49]), float(best_stats[54]), float(best_stats[59]), float(best_stats[64]), float(best_stats[69]), float(best_stats[74]), float(best_stats[79]), float(best_stats[84]), float(best_stats[89]), float(best_stats[94]), float(best_stats[99]), float(best_stats[104])]
-
+    print(best_params)
+    np.save(os.path.join('PredictionData', 'best_params'), np.array(best_params))
     plt.figure(1)
     X = ['b', 'a', 'e', 'ev', 'z', 'theta', 'i', 'k', 'l', 'm', 'n', 'x', 'o', 'p', 'r', 's', 't', 'f', 'g', 'h', 'd']
     X_axis = np.arange(len(X))
@@ -84,12 +90,15 @@ if __name__ == '__main__':
             new_states.append(int(hyperparams[i]))
         else:
             new_states.append(hyperparams[i])
+    np.save(os.path.join('PredictionData', 'new_states'), np.array(new_states))
     t_span = np.array([0, new_states[-1]])
     t = np.linspace(t_span[0], t_span[1], t_span[1] + 1)
     plt.plot(t[:-1], real_infected, '.', label='Real Data')
     # plt.plot(t, generated_data_no_noise[1], label='Underlying Gen Data Signal')
     model_results_best = np.array(run_model('sirhd', best_params, new_states))
     infected_best = model_results_best[1]
+    np.save(os.path.join('PredictionData', 'real_data'), np.array(real_infected))
+    np.save(os.path.join('PredictionData', 'mcmc_data'), np.array(infected_best))
     plt.plot(t, infected_best, label='MCMC Result')
     plt.xlabel('time')
     plt.ylabel('Infected People')

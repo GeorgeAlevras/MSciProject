@@ -22,7 +22,7 @@ def mcmc(model_params, model_hyperparams, real_infected, temperature=1, iteratio
     proposal_width_fraction=0.2, steps_to_update=100, depth_cov_mat=50, convergence_criterion=1.05):
     
     initial_params = np.full((chains, len(model_params[:-1])), model_params[:-1])  # instantiate set of parameters per chain
-    old_params = np.random.uniform(0.95*initial_params, 1.05*initial_params)  # initialise set of parameters; following a uniform distribution
+    old_params = np.random.uniform(0.96*initial_params, 1.04*initial_params)  # initialise set of parameters; following a uniform distribution
     first_params = old_params.copy()
     old_results = np.array([run_model('sirhd', params, model_hyperparams) for params in old_params])
     I_old = old_results[:,1]
