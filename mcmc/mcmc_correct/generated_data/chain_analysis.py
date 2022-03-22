@@ -94,6 +94,9 @@ if __name__ == '__main__':
     model_results_best = np.array(run_model('sirhd', best_params, new_states))
     infected_best = model_results_best[1]
     plt.plot(t, infected_best, label='MCMC Result')
+    np.save(os.path.join('ToPlotMyself', 'gen_noise'), np.array(generated_data_noise[1]))
+    np.save(os.path.join('ToPlotMyself', 'gen_no_noise'), np.array(generated_data_no_noise[1]))
+    np.save(os.path.join('ToPlotMyself', 'infected_best'), infected_best)
     plt.xlabel('time')
     plt.ylabel('Infected People')
     plt.legend()
