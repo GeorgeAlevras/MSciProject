@@ -24,6 +24,15 @@ if __name__ == '__main__':
     number_of_acc_steps = np.load('ExperimentData/number_of_acc_steps.npy', allow_pickle=True)
     gelman_rubin = np.load('ExperimentData/gelman_rubin.npy', allow_pickle=True)
     
+    # print(len(accepted_params[1]))
+    all_chis = []
+    for c in range(len(accepted_params)):
+        for i in range(len(accepted_params[c])):
+            all_chis.append(accepted_params[c][i][1])
+    t = np.array(all_chis)
+    print(min(t))
+
+
     sys.path.insert(0, os.path.realpath(os.path.join(os.getcwd(), '..')))
     plt.rcParams['text.usetex']=True
 
@@ -45,7 +54,7 @@ if __name__ == '__main__':
         np.savetxt('./ConvertedFiles/convert_{}.txt'.format(idx+1),outChain)
 
     samples = loadMCSamples('./ConvertedFiles/convert', settings={'ignore_rows':10})  # , settings={'ignore_rows':10}
-    
+    print(samples.getInlineLatex('p3'))
     marge_stats = [x for x in str(samples.getMargeStats()).split(' ') if '.' in x]
     marge_stats_means = [float(marge_stats[3]), float(marge_stats[11]), float(marge_stats[19]), float(marge_stats[27])]
     marge_stats_lower1sigma = [float(marge_stats[5]), float(marge_stats[13]), float(marge_stats[21]), float(marge_stats[29])]
@@ -112,12 +121,14 @@ if __name__ == '__main__':
     g.settings.axes_fontsize = 20
     g.settings.lab_fontsize = 22
     g.settings.legend_fontsize = 20
+    g.settings.num_plot_contours = 3
     g.triangle_plot([samples], ['p1', 'p2','p3', 'p4'], 
         filled_compare=True, 
-        legend_labels=['Samples'], 
+        legend_labels=['Chain Distributions'], 
         legend_loc='upper right', 
-        line_args=[{'ls':'-', 'color':'green'}], 
-        contour_colors=['green'])
+        line_args=[{'ls':'-', 'lw':2, 'color':'green'}], 
+        contour_colors=['green'],
+        contour_lws=[2])
     g.export('./Images/Triangle.pdf')
 
 

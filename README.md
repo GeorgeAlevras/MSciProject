@@ -1,15 +1,12 @@
-# MSci Project #
+# MSci Thesis Project #
 
-### Summary ###
-This is the repository for all the code relating to the building of compartmental models for my Master's project.
+Author: George Alevras \
+Date: 22/03/2022
 
-Author: Georgios Alevras \
-Date: 12/11/2021
+## Description ##
+This was a year-long research project in partial fulfillment to my MSci Physics degree, alongside my supervisor, Professor Carlo R. Contaldi, MBE. This project involved building semi-stochastic epidemiological models for SARS-CoV-2, exploring the processes, advantages and limitations of creating models with a varying number of assumptions and parameters, and developing a bespoke Monte Carlo Markov Chain algorithm with adapting proposal functions utilising parameter correlations to efficiently infer parameters, formulating a framework of Bayesian inference. The algorithm was tested against simulated data, and then used to obtain probability distributions for the parameters of our models by inferring from real COVID-19 data. These were finally used to make a short-term prediction about the course of the pandemic.
 
-Python Version: 3.8.10
-### Dependencies ###
-- NumPy: v1.19.1
-- Matplotlib: v3.3.1
-- SciPy: v1.5.2
-- argparse
-
+## Organisation ##
+The repository contains:
+- A folder with all the main MCMC algorithms developed to infer from simulated and real COVID-19 data `./mcmc/`
+- A folder with some preliminary research on vaccination efficacy and herd immunity `./PreliminaryExperiments/`
