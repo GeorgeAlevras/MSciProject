@@ -5,5 +5,5 @@ This was a year-long research project in partial fulfillment to my MSci Physics 
 ## Organisation ##
 The repository contains:
 - A directory with all the main MCMC algorithms developed to infer from simulated and real COVID-19 data `./mcmc/`
-- A directory with some preliminary research on vaccination efficacy and herd immunity `./PreliminaryExperiments/`
+- A directory with some preliminary research on vaccination efficacy and herd immunity `./preliminary_experiments/`
 - The MSci Thesis report `./msci_project_report.pdf`
